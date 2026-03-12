@@ -205,6 +205,15 @@ export function MaterialPicker() {
   const outerColor = useDesignStore((s) => s.outerColor);
   const setInnerColor = useDesignStore((s) => s.setInnerColor);
   const setOuterColor = useDesignStore((s) => s.setOuterColor);
+  // Gramasi hardcode untuk Masterbox (shipping) per material id
+  const MASTERBOX_GSM: Record<string, string> = {
+    "1": "125", // Brown Kraft
+    "2": "150", // White Kraft
+    "3": "250", // Premium White
+  };
+
+  const isShipping = model === "shipping";
+
   const handleMaterialChange = (m: MaterialOption) => {
     if (model === "shopping") {
       setMaterial("inner", m.id);
@@ -213,9 +222,17 @@ export function MaterialPicker() {
       setMaterial(side, m.id);
     }
     setPW(side, m.is_premium === "1");
-    setGramasi(side, "");
+
+    if (isShipping && MASTERBOX_GSM[m.id]) {
+      // Auto-set gramasi inner dan outer sekaligus untuk masterbox
+      setGramasi("inner", MASTERBOX_GSM[m.id]);
+      setGramasi("outer", MASTERBOX_GSM[m.id]);
+    } else {
+      setGramasi(side, "");
+    }
   };
   const availableMaterials = useMemo(() => {
+    if (!minOrderConfig) return materials;
     if (model === "mailer")
       return materials.filter((m) =>
         quantity < minOrderConfig.min_premium_white
@@ -232,6 +249,7 @@ export function MaterialPicker() {
     setMaterial(side, first.id);
   }, []);
   useEffect(() => {
+    if (isShipping) return; // Masterbox: gramasi sudah di-set otomatis, skip
     if (gramasiList.length === 0) return;
     const first = gramasiList[0];
     if (!gramasi["inner"]) setGramasi("inner", first.gsm);
@@ -300,23 +318,29 @@ export function MaterialPicker() {
       </div>
       <div>
         <label className="text-sm font-medium">Pilih Gramasi</label>
-        <Select
-          value={gramasi[side]}
-          onValueChange={(value) => setGramasi(side, value)}
-          disabled={!gramasiList || gramasiList.length === 0}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Pilih Gramasi" />
-          </SelectTrigger>
-          <SelectContent>
-            {gramasiList &&
-              gramasiList.map((f) => (
-                <SelectItem key={f.gsm} value={f.gsm}>
-                  {f.gsm} GSM
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        {isShipping ? (
+          <div className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+            {gramasi[side] ? `${gramasi[side]} GSM (otomatis)` : "Pilih material terlebih dahulu"}
+          </div>
+        ) : (
+          <Select
+            value={gramasi[side]}
+            onValueChange={(value) => setGramasi(side, value)}
+            disabled={!gramasiList || gramasiList.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih Gramasi" />
+            </SelectTrigger>
+            <SelectContent>
+              {gramasiList &&
+                gramasiList.map((f) => (
+                  <SelectItem key={f.gsm} value={f.gsm}>
+                    {f.gsm} GSM
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       {((pw[side] &&
         (printing1[side] === "blok" || printing2[side] === "blok")) ||

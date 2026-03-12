@@ -467,6 +467,7 @@ export function useCalculatePrice() {
   if (!s.serverModel.id_bm)  errors.push("Model belum dipilih");
   if (!s.material.outer.id)  errors.push("Material luar belum dipilih");
   if (!s.gramasi.outer)       errors.push("Gramasi luar belum dipilih");
+  if (!s.gramasi.inner)       errors.push("Gramasi dalam belum dipilih");
   if (!s.quantity)            errors.push("Jumlah belum diisi");
   if (isShopping && minOrderConfig && s.quantity < minOrderConfig.min_paperbag)
     errors.push(`Jumlah Paperbag minimal ${minOrderConfig.min_paperbag.toLocaleString("id-ID")} pcs`);
@@ -537,5 +538,60 @@ export function useCalculatePrice() {
     result: (data as CalculatePriceResult) ?? null,
     loading: isLoading,
     error,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  useCalculateWeight
+//  Hitung estimasi berat per pcs untuk Masterbox (shipping model)
+//  Hanya aktif kalau model === "shipping" dan data dimensi + gramasi lengkap
+// ─────────────────────────────────────────────────────────────────────────────
+type CalculateWeightResult = {
+  berat_gram:  number;
+  metode:      string;   // "kalkulasi_rumus" | "fallback_weight_gram"
+  keterangan?: string;   // ada isi kalau pakai fallback
+};
+
+export function useCalculateWeight() {
+  const s          = useDesignStore((s) => s);
+  const isShipping = s.model === "shipping";
+
+  // Payload hanya dikirim kalau shipping + data lengkap
+  const payload =
+    isShipping &&
+    s.serverModel.id_bm &&
+    s.size.length &&
+    s.size.width  &&
+    s.size.height &&
+    s.gramasi.outer &&
+    s.flute.key &&
+    s.fluteWall
+      ? {
+          panjang_cm:   s.size.length,
+          lebar_cm:     s.size.width,
+          tinggi_cm:    s.size.height,
+          outer_gsm:    s.gramasi.outer,
+          flute_code:   s.flute.key,
+          wall_type:    s.fluteWall,
+          box_model_id: s.serverModel.id_bm,
+        }
+      : null;
+
+  const { data, isLoading } = useSWR(
+    payload ? `weight:${JSON.stringify(payload)}` : null,
+    () =>
+      fetch(`/api/proxy/weight`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      })
+        .then((r) => r.json())
+        .then((j) => (j.status === 200 ? (j.data as CalculateWeightResult) : null)),
+    { revalidateOnFocus: false }
+  );
+
+  return {
+    berat:   (data ?? null) as CalculateWeightResult | null,
+    loading: isLoading,
   };
 }

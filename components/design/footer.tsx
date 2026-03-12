@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Info, ShoppingCart, Loader2, CheckCircle, AlertCircle, X, ExternalLink } from "lucide-react";
 import SideOption from "./side-option";
-import { useCalculatePrice, useProjects } from "@/lib/swr";
+import { useCalculatePrice, useCalculateWeight, useProjects } from "@/lib/swr";
+import { Weight } from "lucide-react";
 import { useDesignStore } from "@/store/design-store";
 import Slider3D from "./slider-3d";
 import { useState } from "react";
@@ -31,6 +32,7 @@ type ToastState = {
 
 export function Footer() {
   const { result, loading, error } = useCalculatePrice();
+  const { berat, loading: beratLoading } = useCalculateWeight();
   const needsMoreInput = !loading && result === null;
 
   // ambil buildSnapshot dari store untuk kirim ke Laravel
@@ -201,6 +203,31 @@ export function Footer() {
                   </>
                 )}
               </div>
+
+              {/* Divider */}
+              <div className="hidden md:block h-10 w-px bg-border" />
+
+              {/* Berat per pcs — hanya untuk Masterbox */}
+              {berat !== undefined && (
+                <div className="text-center md:text-left">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Weight className="h-3 w-3" />
+                    Berat / pcs
+                  </div>
+                  {beratLoading ? (
+                    <Skeleton className="h-5 w-16 mt-1" />
+                  ) : berat ? (
+                    <div className="text-sm font-medium">
+                      {berat.berat_gram.toLocaleString("id-ID")} gram
+                      {berat.metode === "fallback_weight_gram" && (
+                        <span className="ml-1 text-xs text-muted-foreground">(est.)</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic">—</div>
+                  )}
+                </div>
+              )}
 
               {/* Divider */}
               <div className="hidden md:block h-10 w-px bg-border" />

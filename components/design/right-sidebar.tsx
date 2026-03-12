@@ -150,11 +150,9 @@ export default function RightSidebar() {
       return Object.values(flutePresets).filter((f) => {
         if (qty < 500) {
           return f.key === "B";
-        } else if (qty >= 500 && !pw.inner && !pw.outer) {
-          return f.key === "B" || f.key === "C";
         } else {
-          // qty >= 500 && (pw.inner || pw.outer)
-          return f.key === "B" || f.key === "E";
+          // qty >= 500: hanya B dan C, apapun materialnya
+          return f.key === "B" || f.key === "C";
         }
       });
     return Object.values(flutePresets).filter((f) =>
