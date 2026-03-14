@@ -212,10 +212,27 @@ export function MaterialPicker() {
     "3": "250", // Premium White
   };
 
+  // Gramasi hardcode untuk Mailer Frontlock per material id — sama nilainya
+  const MAILER_GSM: Record<string, string> = {
+    "1": "125", // Brown Kraft
+    "2": "150", // White Kraft
+    "3": "250", // Premium White
+  };
+
+  // Gramasi hardcode untuk Paperbag/Shopping — semua material fix 250gsm
+  const PAPERBAG_GSM: Record<string, string> = {
+    "6":  "250", // Art Paper
+    "7":  "250", // Duplex
+    "20": "250", // Ivory
+    "22": "250", // Kraft (paperbag)
+  };
+
   const isShipping = model === "shipping";
+  const isMailer   = model === "mailer";
 
   const handleMaterialChange = (m: MaterialOption) => {
-    if (model === "shopping") {
+    if (model === "shopping" || isMailer) {
+      // Shopping dan Mailer: inner selalu sama dengan outer
       setMaterial("inner", m.id);
       setMaterial("outer", m.id);
     } else {
@@ -224,9 +241,16 @@ export function MaterialPicker() {
     setPW(side, m.is_premium === "1");
 
     if (isShipping && MASTERBOX_GSM[m.id]) {
-      // Auto-set gramasi inner dan outer sekaligus untuk masterbox
-      setGramasi("inner", MASTERBOX_GSM[m.id]);
-      setGramasi("outer", MASTERBOX_GSM[m.id]);
+      // Masterbox: hanya set gramasi sisi yang aktif (inner/outer bisa beda material)
+      setGramasi(side, MASTERBOX_GSM[m.id]);
+    } else if (isMailer && MAILER_GSM[m.id]) {
+      // Auto-set gramasi inner dan outer sekaligus untuk mailer frontlock
+      setGramasi("inner", MAILER_GSM[m.id]);
+      setGramasi("outer", MAILER_GSM[m.id]);
+    } else if (model === "shopping" && PAPERBAG_GSM[m.id]) {
+      // Paperbag: semua material fix 250gsm
+      setGramasi("inner", PAPERBAG_GSM[m.id]);
+      setGramasi("outer", PAPERBAG_GSM[m.id]);
     } else {
       setGramasi(side, "");
     }
@@ -249,12 +273,25 @@ export function MaterialPicker() {
     setMaterial(side, first.id);
   }, []);
   useEffect(() => {
-    if (isShipping) return; // Masterbox: gramasi sudah di-set otomatis, skip
+    if (isShipping || isMailer || model === "shopping") return; // gramasi sudah di-set otomatis, skip
     if (gramasiList.length === 0) return;
     const first = gramasiList[0];
     if (!gramasi["inner"]) setGramasi("inner", first.gsm);
     if (!gramasi["outer"]) setGramasi("outer", first.gsm);
   }, [gramasiList, side, material]);
+
+  // Masterbox: sync gramasi ke material yg aktif setiap kali material berubah
+  const innerMatId = material["inner"]?.id;
+  const outerMatId = material["outer"]?.id;
+  useEffect(() => {
+    if (!isShipping) return;
+    if (innerMatId && MASTERBOX_GSM[innerMatId] && !gramasi["inner"]) {
+      setGramasi("inner", MASTERBOX_GSM[innerMatId]);
+    }
+    if (outerMatId && MASTERBOX_GSM[outerMatId] && !gramasi["outer"]) {
+      setGramasi("outer", MASTERBOX_GSM[outerMatId]);
+    }
+  }, [innerMatId, outerMatId]);
   return (
     <div className="space-y-3">
       {model !== "shopping" && (
@@ -318,9 +355,9 @@ export function MaterialPicker() {
       </div>
       <div>
         <label className="text-sm font-medium">Pilih Gramasi</label>
-        {isShipping ? (
+        {(isShipping || isMailer || model === "shopping") ? (
           <div className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
-            {gramasi[side] ? `${gramasi[side]} GSM (otomatis)` : "Pilih material terlebih dahulu"}
+            {gramasi[side] ? `${gramasi[side]} GSM (otomatis)` : (model === "shopping" ? "250 GSM (otomatis)" : "Pilih material terlebih dahulu")}
           </div>
         ) : (
           <Select

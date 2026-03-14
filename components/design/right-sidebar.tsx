@@ -155,8 +155,19 @@ export default function RightSidebar() {
           return f.key === "B" || f.key === "C";
         }
       });
+    if (model === "mailer") {
+      // Mailer Frontlock: hanya single wall
+      // Premium White (pw.outer atau pw.inner) → hanya B dan E
+      // Material lain → B, C, E
+      const isPW = pw.outer || pw.inner;
+      return Object.values(flutePresets).filter((f) =>
+        isPW
+          ? f.key === "B" || f.key === "E"
+          : f.key === "B" || f.key === "C" || f.key === "E"
+      );
+    }
     return Object.values(flutePresets).filter((f) =>
-      model === "mailer" || pw.inner || pw.outer
+      pw.inner || pw.outer
         ? f.key !== "CB" && f.key !== "C"
         : f.key !== "CB",
     );
@@ -167,11 +178,8 @@ export default function RightSidebar() {
       // reset flute ke default non-CB jika sebelumnya CB
       if (flute.key === "CB")
         setFlute({ key: flutePresets.B.key, val: flutePresets.B.val });
-    } else {
-      setFluteWall("double");
-      // shipping → paksa CB
-      setFlute({ key: flutePresets.CB.key, val: flutePresets.CB.val });
     }
+    // shipping: biarkan user pilih sendiri single/double
   }, [model]);
   useEffect(() => {
     if (pw.inner && pw.outer) {

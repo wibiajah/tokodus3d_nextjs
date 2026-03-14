@@ -555,10 +555,11 @@ type CalculateWeightResult = {
 export function useCalculateWeight() {
   const s          = useDesignStore((s) => s);
   const isShipping = s.model === "shipping";
+  const isMailer   = s.model === "mailer";
 
-  // Payload hanya dikirim kalau shipping + data lengkap
+  // Payload dikirim untuk shipping dan mailer
   const payload =
-    isShipping &&
+    (isShipping || isMailer) &&
     s.serverModel.id_bm &&
     s.size.length &&
     s.size.width  &&

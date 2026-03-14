@@ -4,11 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Info, ShoppingCart, Loader2, CheckCircle, AlertCircle, X, ExternalLink } from "lucide-react";
 import SideOption from "./side-option";
-import { useCalculatePrice, useCalculateWeight, useProjects } from "@/lib/swr";
+import { useCalculatePrice, useCalculateWeight, useProjects, useMaterials, useFlutes, useLaminasiOptions, useSablonOptions } from "@/lib/swr";
 import { Weight } from "lucide-react";
 import { useDesignStore } from "@/store/design-store";
 import Slider3D from "./slider-3d";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Skeleton } from "../ui/skeleton";
 
 const LARAVEL = process.env.NEXT_PUBLIC_LARAVEL_URL;
@@ -33,6 +33,14 @@ type ToastState = {
 export function Footer() {
   const { result, loading, error } = useCalculatePrice();
   const { berat, loading: beratLoading } = useCalculateWeight();
+  const serverModel = useDesignStore((s) => s.serverModel);
+  const { loading: loadingMaterial, error: errorMaterial } = useMaterials(serverModel?.id_bm ?? undefined);
+  const { loading: loadingFlutes, error: errorFlutes } = useFlutes();
+  const { loading: loadingLaminasi, error: errorLaminasi } = useLaminasiOptions();
+  const { loading: loadingSablon, error: errorSablon } = useSablonOptions();
+
+  const isLoadingResources = loadingMaterial || loadingFlutes || loadingLaminasi || loadingSablon;
+  const hasResourceError   = !!(errorMaterial || errorFlutes || errorLaminasi || errorSablon);
   const needsMoreInput = !loading && result === null;
 
   // ambil buildSnapshot dari store untuk kirim ke Laravel
@@ -40,7 +48,6 @@ export function Footer() {
   const quantity       = useDesignStore((s) => s.quantity);
   const setQuantity    = useDesignStore((s) => s.setQuantity);
   const mode           = useDesignStore((s) => s.mode);
-  const serverModel    = useDesignStore((s) => s.serverModel);
 
   // Nama model untuk judul di cart
   function getCartTitle(): string {
@@ -65,6 +72,13 @@ export function Footer() {
   const [isFocused, setIsFocused] = useState(false);
   const [toast, setToast]         = useState<ToastState>({ show: false, type: "loading", message: "" });
   const [isAdding, setIsAdding]   = useState(false);
+  // Track apakah resource pernah berhasil load semua (untuk deteksi error saat editing)
+  const [wasEverReady, setWasEverReady] = useState(false);
+  useEffect(() => {
+    if (!isLoadingResources && !hasResourceError) {
+      setWasEverReady(true);
+    }
+  }, [isLoadingResources, hasResourceError]);
 
   async function addToCart() {
     const customerId = getCustomerId();
@@ -121,6 +135,43 @@ export function Footer() {
   return (
     <>
       {mode === "2d" ? <SideOption /> : <Slider3D isFooter={true} />}
+      {/* Resource loading / error notification bar */}
+      {(isLoadingResources || hasResourceError) && (() => {
+        // Tentukan resource mana yang sedang loading atau error
+        const resources = [
+          { label: "Material",  loading: loadingMaterial, error: !!errorMaterial },
+          { label: "Flute",     loading: loadingFlutes,   error: !!errorFlutes },
+          { label: "Laminasi",  loading: loadingLaminasi, error: !!errorLaminasi },
+          { label: "Sablon",    loading: loadingSablon,   error: !!errorSablon },
+        ];
+        const errorList   = resources.filter(r => r.error).map(r => r.label);
+        const loadingList = resources.filter(r => r.loading && !r.error).map(r => r.label);
+        // Error saat editing = pernah ready tapi sekarang error
+        const isEditingError = wasEverReady && hasResourceError;
+
+        if (hasResourceError) return (
+          <div className="w-full px-4 py-2 flex items-center gap-2 text-xs font-medium bg-destructive/10 text-destructive border-t border-destructive/20">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {isEditingError ? "⚠ Data hilang saat editing: " : "Gagal memuat: "}
+              <span className="font-semibold">{errorList.join(", ")}</span>
+              {" — "}
+              <button className="underline font-semibold" onClick={() => window.location.reload()}>refresh halaman</button>
+            </span>
+          </div>
+        );
+
+        return (
+          <div className="w-full px-4 py-2 flex items-center gap-2 text-xs font-medium bg-muted text-muted-foreground border-t border-border">
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            <span>
+              Memuat data:{" "}
+              <span className="font-medium text-foreground">{loadingList.join(", ")}</span>
+              {loadingList.length === 0 && "konfigurasi..."}
+            </span>
+          </div>
+        );
+      })()}
       <footer className="fixed bottom-0 left-0 w-full z-40">
         <Card className="rounded-none p-0 m-0 border-x-0 border-b-0 shadow-lg">
           <CardContent className="flex flex-col md:flex-row items-center justify-between gap-6 py-4">
@@ -130,7 +181,7 @@ export function Footer() {
                 Dilayani dan diproduksi langsung oleh{" "}
                 <span className="font-semibold text-foreground">Tokodus</span>
               </p>
-              <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
+              <div className="flex items-center justify-center md:justify-start gap-2 text-sm flex-wrap">
                 <span className="text-muted-foreground">
                   Halaman ini dikembangkan oleh
                 </span>
@@ -141,6 +192,53 @@ export function Footer() {
                 >
                   CV Multi Graha Radhika
                 </Link>
+
+                {/* Resource status bar — sejajar dengan watermark, hanya saat loading/error */}
+                {(isLoadingResources || hasResourceError) && (<>
+                <span className="text-muted-foreground/40">|</span>
+                <div className="flex items-center gap-2">
+                {/* Dot indikator per resource */}
+                {[
+                  { label: "Model",     loading: false,           error: false },
+                  { label: "Material",  loading: loadingMaterial, error: !!errorMaterial },
+                  { label: "Flute",     loading: loadingFlutes,   error: !!errorFlutes },
+                  { label: "Laminasi",  loading: loadingLaminasi, error: !!errorLaminasi },
+                  { label: "Sablon",    loading: loadingSablon,   error: !!errorSablon },
+                ].map((r) => (
+                  <div key={r.label} className="flex items-center gap-1" title={
+                    r.error   ? `${r.label}: gagal dimuat` :
+                    r.loading ? `${r.label}: memuat...` :
+                                `${r.label}: siap`
+                  }>
+                    {r.error ? (
+                      <span className="h-2 w-2 rounded-full bg-destructive inline-block" />
+                    ) : r.loading ? (
+                      <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                    ) : (
+                      <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                    )}
+                    <span className={`text-[10px] ${
+                      r.error   ? "text-destructive" :
+                      r.loading ? "text-muted-foreground" :
+                                  "text-muted-foreground"
+                    }`}>{r.label}</span>
+                  </div>
+                ))}
+
+                {/* Status teks keseluruhan */}
+                <span className="text-[10px] ml-1">
+                  {hasResourceError ? (
+                    <span className="text-destructive font-medium">
+                      ⚠ Gagal — <button className="underline" onClick={() => window.location.reload()}>refresh</button>
+                    </span>
+                  ) : isLoadingResources ? (
+                    <span className="text-muted-foreground">Memuat...</span>
+                  ) : (
+                    <span className="text-green-600 font-medium">✓ Siap 100%</span>
+                  )}
+                </span>
+                </div>
+                </>)}
               </div>
             </div>
 
@@ -186,9 +284,9 @@ export function Footer() {
                 ) : (
                   <>
                     {loading ? (
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-6 w-28" />
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                        <span>Menghitung harga...</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm">
@@ -218,9 +316,10 @@ export function Footer() {
                     <Skeleton className="h-5 w-16 mt-1" />
                   ) : berat ? (
                     <div className="text-sm font-medium">
-                      {berat.berat_gram.toLocaleString("id-ID")} gram
-                      {berat.metode === "fallback_weight_gram" && (
-                        <span className="ml-1 text-xs text-muted-foreground">(est.)</span>
+                      {berat.metode === "fallback_weight_gram" ? (
+                        <span className="text-muted-foreground">N/A</span>
+                      ) : (
+                        <>{berat.berat_gram.toLocaleString("id-ID")} gram</>
                       )}
                     </div>
                   ) : (
@@ -245,9 +344,9 @@ export function Footer() {
                 ) : (
                   <>
                     {loading ? (
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-6 w-28" />
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                        <span>Menghitung harga...</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
