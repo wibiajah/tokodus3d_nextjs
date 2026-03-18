@@ -2,7 +2,7 @@ import { Image as KonvaImage } from "react-konva";
 import useImage from "use-image";
 import React from "react";
 import { Printing, useDesignStore, type ImageItem } from "@/store/design-store";
-import Konva from "konva";
+import { Grayscale } from "konva/lib/filters/Grayscale";
 
 export interface CanvasImageItemProps {
   el: ImageItem;
@@ -26,7 +26,7 @@ export const CanvasImageItem: React.FC<CanvasImageItemProps> = ({
   setGuides,
 }) => {
   const [img] = useImage(el.dataUrl);
-  const imageRef = React.useRef<Konva.Image>(null);
+  const imageRef = React.useRef<any>(null);
   // Jika visible: false, jangan render sama sekali
   if (el.visible === false) return null;
   React.useEffect(() => {
@@ -47,7 +47,7 @@ export const CanvasImageItem: React.FC<CanvasImageItemProps> = ({
       height={el.height}
       draggable={mode === "select"}
       scaleX={flip >= 0 ? 1 : -1}
-      filters={printing[flip >= 0 ? "outer" : "inner"] === "eco" ? [Konva.Filters.Grayscale] : []}
+      filters={printing[flip >= 0 ? "outer" : "inner"] === "eco" ? [Grayscale] : []}
       onClick={() => mode === "select" && setSelectedId(el.id)}
       // onDragMove={(e) => {
       //   const node = e.target;
@@ -86,7 +86,7 @@ export const CanvasImageItem: React.FC<CanvasImageItemProps> = ({
         // setGuides({ x: [], y: [] });
       }}
       onTransformEnd={(e) => {
-        const node = e.target as Konva.Image;
+        const node = e.target as any;
         updateImage(el.id, {
           x: node.x(),
           y: node.y(),

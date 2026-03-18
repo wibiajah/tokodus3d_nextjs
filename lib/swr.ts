@@ -477,6 +477,8 @@ export function useCalculatePrice() {
     errors.push("Gramasi dalam belum dipilih");
   if (
     minOrderConfig &&
+    !isShopping &&
+    s.model !== "mailer" &&  // mailer punya validasi sendiri
     !["1", "2", "20"].includes(s.material.outer.id) &&
     !["1", "2", "20"].includes(s.material.inner.id) &&
     s.quantity < minOrderConfig.min_non_kraft
@@ -556,10 +558,11 @@ export function useCalculateWeight() {
   const s          = useDesignStore((s) => s);
   const isShipping = s.model === "shipping";
   const isMailer   = s.model === "mailer";
+  const isShopping = s.model === "shopping";
 
-  // Payload dikirim untuk shipping dan mailer
+  // Payload dikirim untuk shipping, mailer, dan paperbag
   const payload =
-    (isShipping || isMailer) &&
+    (isShipping || isMailer || isShopping) &&
     s.serverModel.id_bm &&
     s.size.length &&
     s.size.width  &&

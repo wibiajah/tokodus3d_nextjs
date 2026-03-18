@@ -16,7 +16,7 @@ const ubuntu = Ubuntu({
 });
 
 export const metadata: Metadata = {
-  title: "Tokodus",
+  title: "Tokodus | 3D Design",
   description: "Box Model Config",
   generator: "time, knowledge, consistency",
   icons: {

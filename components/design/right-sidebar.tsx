@@ -155,19 +155,8 @@ export default function RightSidebar() {
           return f.key === "B" || f.key === "C";
         }
       });
-    if (model === "mailer") {
-      // Mailer Frontlock: hanya single wall
-      // Premium White (pw.outer atau pw.inner) → hanya B dan E
-      // Material lain → B, C, E
-      const isPW = pw.outer || pw.inner;
-      return Object.values(flutePresets).filter((f) =>
-        isPW
-          ? f.key === "B" || f.key === "E"
-          : f.key === "B" || f.key === "C" || f.key === "E"
-      );
-    }
     return Object.values(flutePresets).filter((f) =>
-      pw.inner || pw.outer
+      model === "mailer" || pw.inner || pw.outer
         ? f.key !== "CB" && f.key !== "C"
         : f.key !== "CB",
     );
@@ -181,6 +170,39 @@ export default function RightSidebar() {
     }
     // shipping: biarkan user pilih sendiri single/double
   }, [model]);
+
+  // Auto-set flute ke CB saat double wall dipilih
+  // Auto-reset ke B saat kembali ke single wall
+  useEffect(() => {
+    if (fluteWall === "double" && flute.key !== "CB") {
+      setFlute({ key: flutePresets.CB.key, val: flutePresets.CB.val });
+    }
+    if (fluteWall === "single" && flute.key === "CB") {
+      setFlute({ key: flutePresets.B.key, val: flutePresets.B.val });
+    }
+  }, [fluteWall]);
+
+  // Auto-set flute ke CB saat double wall dipilih
+  // Auto-reset ke B saat kembali ke single wall
+  useEffect(() => {
+    if (fluteWall === "double" && flute.key !== "CB") {
+      setFlute({ key: flutePresets.CB.key, val: flutePresets.CB.val });
+    }
+    if (fluteWall === "single" && flute.key === "CB") {
+      setFlute({ key: flutePresets.B.key, val: flutePresets.B.val });
+    }
+  }, [fluteWall]);
+
+  // Auto-set flute ke CB saat double wall dipilih
+  useEffect(() => {
+    if (fluteWall === "double" && flute.key !== "CB") {
+      setFlute({ key: flutePresets.CB.key, val: flutePresets.CB.val });
+    }
+    // Auto-reset ke B saat kembali ke single wall dari double wall
+    if (fluteWall === "single" && flute.key === "CB") {
+      setFlute({ key: flutePresets.B.key, val: flutePresets.B.val });
+    }
+  }, [fluteWall]);
   useEffect(() => {
     if (pw.inner && pw.outer) {
       setSisiCetak1("2");

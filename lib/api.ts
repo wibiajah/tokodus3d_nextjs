@@ -53,13 +53,10 @@ function getProxyHeaders(): Record<string, string> {
 
 /** GET /api/3d/{endpoint} — PUBLIC, langsung ke Laravel (data statis) */
 export default async function api(endpoint: string) {
-  const r = await fetch(`${getBase()}/api/3d/${endpoint}`, {
+  const r = await fetch(`/api/proxy/public/${endpoint}`, {
     headers: { "Accept": "application/json" },
   });
-  if (!r.ok) {
-    console.error(`Laravel API error: ${r.status} for "${endpoint}"`);
-    return [];
-  }
+  if (!r.ok) return [];
   const j = await r.json();
   return j.status === 200 ? j.data : [];
 }

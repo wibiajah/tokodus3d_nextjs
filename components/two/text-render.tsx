@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import { Text, Rect } from "react-konva";
-import Konva from "konva";
 import type { TextItem } from "@/store/design-store";
 
 export interface CanvasTextItemProps {
@@ -99,7 +98,7 @@ const CanvasTextItem: React.FC<CanvasTextItemProps> = ({
           // setGuides({ x: [], y: [] });
         }}
         onTransformEnd={(e) => {
-          const node = e.target as Konva.Text;
+          const node = e.target as any;
           // const scaleX = node.scaleX();
           // const scaleY = node.scaleY();
           // node.scaleX(1);
@@ -156,14 +155,18 @@ const CanvasTextItem: React.FC<CanvasTextItemProps> = ({
 
 export default CanvasTextItem;
 
-// Helper untuk menghitung bounding box text tanpa menggambar di canvas
+// Helper untuk menghitung bounding box text menggunakan Canvas API browser
 function measureText(el: TextItem) {
-  const temp = new Konva.Text({
-    text: el.text,
-    fontSize: el.fontSize,
-    fontFamily: el.font,
-  });
-  const box = temp.getClientRect();
-  temp.destroy();
-  return { width: box.width * 1.1, height: box.height };
+  if (typeof window === "undefined") {
+    // SSR fallback
+    return { width: el.fontSize * el.text.length * 0.6, height: el.fontSize * 1.2 };
+  }
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { width: 100, height: el.fontSize };
+  ctx.font = `${el.fontSize}px ${el.font ?? "sans-serif"}`;
+  const metrics = ctx.measureText(el.text);
+  const width  = metrics.width * 1.1;
+  const height = el.fontSize * 1.2;
+  return { width, height };
 }
