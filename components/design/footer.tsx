@@ -183,7 +183,7 @@ export function Footer() {
               </p>
               <div className="flex items-center justify-center md:justify-start gap-2 text-sm flex-wrap">
                 <span className="text-muted-foreground">
-                  Halaman ini dikembangkan oleh
+                  Halaman ini dikembangkan oleh : 
                 </span>
                 <Link
                   href="https://multigraharadhika.co.id/"

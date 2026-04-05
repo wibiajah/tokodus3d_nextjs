@@ -56,7 +56,10 @@ export default async function api(endpoint: string) {
   const r = await fetch(`/api/proxy/public/${endpoint}`, {
     headers: { "Accept": "application/json" },
   });
-  if (!r.ok) return [];
+  if (!r.ok) {
+    console.error(`Laravel API error: ${r.status} for "${endpoint}"`);
+    return [];
+  }
   const j = await r.json();
   return j.status === 200 ? j.data : [];
 }
